@@ -1,0 +1,110 @@
+// schema.prisma
+
+generator client {
+    provider = "prisma-client-js"
+}
+
+datasource db {
+    provider  = "postgresql"
+    url       = env("POSTGRES_PRISMA_URL") // uses connection pooling
+    directUrl = env("POSTGRES_URL_NON_POOLING") // uses a direct connection
+}
+
+model Room {
+    id          String        @id @default(cuid())
+    name        String        @unique
+    capacity    Int
+    Reservation Reservation[]
+
+    @@map(name: "rooms")
+}
+
+model Reservation {
+    id        String   @id @default(cuid())
+    room      Room     @relation(fields: [roomName], references: [name])
+    roomName  String
+    user      User     @relation(fields: [userId], references: [id])
+    userId    String
+    date      DateTime
+    createdAt DateTime @default(now()) @map(name: "created_at")
+    updatedAt DateTime @updatedAt @map(name: "updated_at")
+    // Day       Day?      @relation(fields: [dayDate], references: [date])
+    // dayDate   DateTime?
+
+    @@unique([userId, date])
+    @@map(name: "reservations")
+}
+
+// model Day {
+//     id           String        @id @default(cuid())
+//     date         DateTime      @unique
+//     reservations Reservation[]
+//     createdAt    DateTime      @default(now()) @map(name: "created_at")
+//     updatedAt    DateTime      @updatedAt @map(name: "updated_at")
+// }
+
+model User {
+    id           String        @id @default(cuid())
+    login        String?       @unique
+    email        String?       @unique
+    class        String?
+    createdAt    DateTime      @default(now()) @map(name: "created_at")
+    updatedAt    DateTime      @updatedAt @map(name: "updated_at")
+    reservations Reservation[]
+    role         String?       @default("user")
+    jobTitle     String?
+
+    // OAuth only
+    name          String?
+    emailVerified DateTime?
+    image         String?
+    accounts      Account[]
+    sessions      Session[]
+
+    @@map(name: "users")
+}
+
+model Account {
+    id                String  @id @default(cuid())
+    userId            String
+    type              String
+    provider          String
+    providerAccountId String
+    refresh_token     String? @db.Text
+    access_token      String? @db.Text
+    expires_at        Int?
+    token_type        String?
+    scope             String?
+    id_token          String? @db.Text
+    session_state     String?
+
+    expires_in     Int?
+    ext_expires_in Int?
+
+    user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+    @@unique([provider, providerAccountId])
+}
+
+model Session {
+    id           String   @id @default(cuid())
+    sessionToken String   @unique
+    userId       String
+    expires      DateTime
+    user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model VerificationToken {
+    identifier String
+    token      String   @unique
+    expires    DateTime
+
+    @@unique([identifier, token])
+}
+
+model ExcludedDays {
+    id        String   @id @default(cuid())
+    date      DateTime @unique
+    createdAt DateTime @default(now()) @map(name: "created_at")
+    updatedAt DateTime @updatedAt @map(name: "updated_at")
+}
